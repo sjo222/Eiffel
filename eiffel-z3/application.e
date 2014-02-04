@@ -14,140 +14,99 @@ create
 
 feature {NONE} -- Initialization
 
+				cmd: STRING = "z3/z3.exe -smt2 simple.z3"
+				dir: STRING = "z3"
+
 	make
 		local
-			p: PROCESS
-			pf : PROCESS_FACTORY
-			s: STRING
-		do
-			print ("Hello Eiffel World!%N")
-
-			s := output_of_command2 ("bash -c ls", "/")
-			print(s)
-
---			create pf
---			p := pf.process_launcher_with_command_line ("bash -c time","/Users/jonathan/Desktop" )
---			p.redirect_output_to_agent (agent response)
---			p.redirect_error_to_same_as_output
---			p.launch
---			-- Do we need the next two lines?
---			p.wait_for_exit
---			print(p.exit_code)
-		end
-
-	response (s: STRING)
-		do
-			io.put_string ("response from time command:")
-			io.new_line
-			io.put_string (s)
-			print(s.count)
-			io.new_line
-		end
-
-	make2
-			-- Run application.
-		local
-			p: PROCESS_IMP
-			pf: PROCESS_FACTORY
-			e: EXECUTION_ENVIRONMENT
-		do
-			--| Add your code here
-			create e
-			print ("Hello Eiffel World!%N")
-			create p.make_with_command_line ("z3 -smt2 /Users/jonathan/Desktop/Eiffel-Z3/simple.z3", Void)
---			p.redirect_output_to_agent (agent response)
---			p.redirect_output_to_file ("/Users/jonathan/Desktop/Eiffel-Z3/out.txt")
-			p.redirect_error_to_same_as_output
-
---			p.set_separate_console (True)
-			p.launch
-
-			p.wait_for_exit
-			e.sleep (1*1000000000)
-			print(p.exit_code)
-		end
-
-	output_of_command (a_cmd, a_dir, output_file: STRING)
-		require
-			cmd_attached: a_cmd /= Void
-			dir_attached: a_dir /= Void
-			out_attached: output_file /= void
-		local
-			pf: PROCESS_FACTORY
-			p: PROCESS
-			retried: BOOLEAN
-			last_error: INTEGER
-			is_timed_out: BOOLEAN
-			timeout : INTEGER
-		do
-			timeout := 100
-			is_timed_out := false
-			if not retried then
-				last_error := 0
+				p: PROCESS
+				pf : PROCESS_FACTORY
+			do
+				print("%N========================%N")
+				print ("Hello Eiffel World!%N")
+				create output.make_empty
 				create pf
-				p := pf.process_launcher_with_command_line (a_cmd, a_dir)
-				p.set_hidden (true)
-				p.set_separate_console (False)
-				p.redirect_input_to_stream
-				p.redirect_output_to_file (output_file)
-
+				p := pf.process_launcher_with_command_line (cmd, dir)
+				p.redirect_output_to_agent (agent response(?))
 				p.redirect_error_to_same_as_output
 				p.launch
 				p.wait_for_exit
-				p.wait_for_exit_with_timeout (timeout)
-
-				if not p.has_exited then
-					is_timed_out := true
-					p.terminate
-					p.wait_for_exit
-					print ("WARNING! execution of command " + a_cmd + " TIMED OUT%N")
-				end
-			else
-				last_error := 1
+				create proved.make (10)
+				break_down_output
 			end
-		rescue
-			retried := True
-			retry
-		end
 
-	output_of_command2 (a_cmd, a_dir: STRING): STRING
-		-- Output of command `a_cmd' launched in directory `a_dir'.
-		require
-			cmd_attached: a_cmd /= Void
-			dir_attached: a_dir /= Void
+	break_down_output
 		local
-			pf: PROCESS_FACTORY
-			p: PROCESS
-			retried: BOOLEAN
-			last_error: INTEGER
+				ls : LIST [STRING]
+				tag : STRING
+				error : BOOLEAN
 		do
-			Result := ""
-			if not retried then
-				last_error := 0
-				create pf
-				p := pf.process_launcher_with_command_line (a_cmd, a_dir)
-				p.set_hidden (True)
-				p.set_separate_console (False)
---				p.redirect_error_to_agent (agent response2(?))
-				p.redirect_output_to_agent (agent response2(?))
-				p.launch
-				p.wait_for_exit
-			else
-				last_error := 1
-			end
-		rescue
-			retried := True
-			retry
+				ls := output.split ('%N')
+				from
+					ls.start
+					from
+					until
+						ls.off or else ls.item.starts_with ("> ")
+					loop
+						ls.forth
+					end
+				invariant
+					ls.off or else ls.item.starts_with ("> ")
+				until
+					ls.off
+				loop
+					tag := ls.item.substring (3, ls.item.count)
+					tag.trim
+					ls.forth
+					if not ls.off then
+						proved [tag] := ls.item ~ "unsat"
+						error :=
+							not (	ls.item ~ "unsat"
+								or	ls.item ~ "sat"
+								or	ls.item ~ "timeout"
+								or	ls.item ~ "unknown")
+--						when "unsat" then
+--							proved [tag] := True
+--						when "sat" then
+--							proved [tag] := False
+--						when "timeout" then
+--							proved [tag] := False
+--						when "unknown" then
+--							proved [tag] := False
+--						else
+--							-- report error
+--						end
+					end
+					ls.forth
+					from
+					until
+						ls.off or else ls.item.starts_with ("> ")
+					loop
+						ls.forth
+					end
+				variant
+					ls.count - ls.index + 1
+				end
 		end
 
-	response2 (s: STRING)
+	output: STRING
+
+	proved : HASH_TABLE [BOOLEAN, STRING]
+
+	response (s: STRING)
 		do
-			io.put_string ("response from time command:")
-			io.new_line
-			io.put_string (s)
-			print(s.count)
-			io.new_line
-		end
+			if not s.is_empty then
+	 			io.put_string ("%Nresponse from " + cmd  + " command in directory: " +dir)
+	 			io.new_line
+	 			io.put_string (s)
+	 			output.append (s)
+	 		end
+ 		end
+
+
+
+
+
 end
 
 
