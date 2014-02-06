@@ -1,0 +1,15 @@
+conjecture c1 : true 
+conjecture c2 : false
+conjecture c3 : true /\ true
+conjecture c4 : true /\ false
+conjecture c5 : true /\ (true /\ false)
+
+var p : BOOLEAN
+conjecture c6 : p /\ false 
+conjecture c7 : p /\ !p
+
+var q : BOOLEAN
+conjecture c8 : p /\ q 
+
+conjecture c9 : p \/ !p
+conjecture c10 : p \/ q
